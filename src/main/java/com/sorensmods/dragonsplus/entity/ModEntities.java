@@ -16,7 +16,7 @@ public class ModEntities {
     //Register ender dragon entity type
     public static final RegistryObject<EntityType<ModEnderDragon>> ModEnderDragonRegister = ModEntityTypes.register("modenderdragon",
             () -> EntityType.Builder.of(ModEnderDragon::new, MobCategory.CREATURE)
-                    .sized(3f, 3f)
+                    .sized(3.5f, 3.5f)
                     .build("modenderdragon"));
 
 
