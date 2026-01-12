@@ -320,7 +320,7 @@ public class ModEnderDragonAnimator {
 		.build();
 
 	public static final AnimationDefinition walking = AnimationDefinition.Builder.withLength(2.0F).looping()
-		.addAnimation("head", new AnimationChannel(AnimationChannel.Targets.ROTATION, 
+		.addAnimation("head", new AnimationChannel(AnimationChannel.Targets.ROTATION,
 			new Keyframe(0.0F, KeyframeAnimations.degreeVec(2.5F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
 			new Keyframe(0.5729F, KeyframeAnimations.degreeVec(5.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
 			new Keyframe(1.0F, KeyframeAnimations.degreeVec(2.5F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
@@ -375,7 +375,7 @@ public class ModEnderDragonAnimator {
 			new Keyframe(1.5729F, KeyframeAnimations.degreeVec(2.5201F, 65.2129F, -22.6909F), AnimationChannel.Interpolations.LINEAR),
 			new Keyframe(2.0F, KeyframeAnimations.degreeVec(2.5201F, 65.2129F, -22.6909F), AnimationChannel.Interpolations.LINEAR)
 		))
-		.addAnimation("left_wing", new AnimationChannel(AnimationChannel.Targets.POSITION, 
+		.addAnimation("left_wing", new AnimationChannel(AnimationChannel.Targets.POSITION,
 			new Keyframe(0.0F, KeyframeAnimations.posVec(-5.0F, 0.0F, 37.0F), AnimationChannel.Interpolations.LINEAR),
 			new Keyframe(0.5729F, KeyframeAnimations.posVec(-5.0F, 0.0F, 37.0F), AnimationChannel.Interpolations.LINEAR),
 			new Keyframe(1.0F, KeyframeAnimations.posVec(-5.0F, 0.0F, 37.0F), AnimationChannel.Interpolations.LINEAR),
@@ -396,7 +396,7 @@ public class ModEnderDragonAnimator {
 			new Keyframe(1.5729F, KeyframeAnimations.degreeVec(2.5201F, -65.2129F, 22.6909F), AnimationChannel.Interpolations.LINEAR),
 			new Keyframe(2.0F, KeyframeAnimations.degreeVec(2.5201F, -65.2129F, 22.6909F), AnimationChannel.Interpolations.LINEAR)
 		))
-		.addAnimation("right_wing", new AnimationChannel(AnimationChannel.Targets.POSITION, 
+		.addAnimation("right_wing", new AnimationChannel(AnimationChannel.Targets.POSITION,
 			new Keyframe(0.0F, KeyframeAnimations.posVec(5.0F, 0.0F, 37.0F), AnimationChannel.Interpolations.LINEAR),
 			new Keyframe(0.5729F, KeyframeAnimations.posVec(5.0F, 0.0F, 37.0F), AnimationChannel.Interpolations.LINEAR),
 			new Keyframe(1.0F, KeyframeAnimations.posVec(5.0F, 0.0F, 37.0F), AnimationChannel.Interpolations.LINEAR),

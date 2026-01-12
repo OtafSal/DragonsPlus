@@ -64,6 +64,7 @@ public class ModEnderDragonModel<T extends ModEnderDragon> extends HierarchicalM
 	private final ModelPart tail12;
 
 	public ModEnderDragonModel(ModelPart root) {
+
 		this.body = root.getChild("body");
 		this.left_wing = this.body.getChild("left_wing");
 		this.left_wing_leather = this.left_wing.getChild("left_wing_leather");
@@ -236,16 +237,21 @@ public class ModEnderDragonModel<T extends ModEnderDragon> extends HierarchicalM
 	public void setupAnim(ModEnderDragon entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
 		 this.root().getAllParts().forEach(ModelPart::resetPose);
 
-		 this.animateWalk(ModEnderDragonAnimator.walking, limbSwing, limbSwingAmount, 2f, 1f);
-		 this.animate(entity.idleAnimationState, ModEnderDragonAnimator.Idle, ageInTicks);
+		 	//The value below registers the animations' durations.
+		 this.animate(entity.anims.WALKING.animation, ModEnderDragonAnimator.walking, ageInTicks);
+		 entity.anims.WALKING.animDuration = 20*2;
+
+		 this.animate(entity.anims.IDLE.animation, ModEnderDragonAnimator.Idle, ageInTicks);
+		 entity.anims.IDLE.animDuration = 20*4;
 
 	}
 
 	@Override
-	public void renderToBuffer( PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int pColor) {
+	public void renderToBuffer(@NotNull PoseStack poseStack, @NotNull VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int pColor) {
 		body.render(poseStack, vertexConsumer, packedLight, packedOverlay, pColor);
 	}
 
+	@NotNull
 	@Override
 	public ModelPart root(){
 
