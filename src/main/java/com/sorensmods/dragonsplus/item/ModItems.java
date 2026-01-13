@@ -1,12 +1,8 @@
 package com.sorensmods.dragonsplus.item;
 
 import com.sorensmods.dragonsplus.DragonsPlus;
-import com.sorensmods.dragonsplus.entity.ModEnderDragon;
 import com.sorensmods.dragonsplus.entity.ModEntities;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.SpawnEggItem;
 import net.minecraftforge.common.ForgeSpawnEggItem;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;

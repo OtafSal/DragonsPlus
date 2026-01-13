@@ -2,15 +2,18 @@ package com.sorensmods.dragonsplus.entity.client.enderdragonRendering;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.sorensmods.dragonsplus.DragonsPlus;
-import com.sorensmods.dragonsplus.entity.ModEnderDragon;
+import com.sorensmods.dragonsplus.entity.custom.ModEnderDragon;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
+import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.resources.ResourceLocation;
 
 public class ModEnderDragonRenderer extends MobRenderer<ModEnderDragon, ModEnderDragonModel<ModEnderDragon>> {
     public ModEnderDragonRenderer(EntityRendererProvider.Context pContext) {
         super(pContext, new ModEnderDragonModel<>(pContext.bakeLayer(ModEnderDragonModel.LAYER_LOCATION)), 1.5f);
+
+        addLayer(SADDLE_LAYER);
     }
 
     @Override
@@ -27,6 +30,15 @@ public class ModEnderDragonRenderer extends MobRenderer<ModEnderDragon, ModEnder
 
         super.render(pEntity, pEntityYaw, pPartialTicks, pPoseStack, pBuffer, pPackedLight);
     }
+    public final RenderLayer<ModEnderDragon, ModEnderDragonModel<ModEnderDragon>> SADDLE_LAYER = new RenderLayer<>(this)
+    {
+        @Override
+        public void render(PoseStack ps, MultiBufferSource buffer, int light, ModEnderDragon dragon, float pLimbSwing, float pLimbSwingAmount, float pPartialTicks, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch)
+        {
+            if (dragon.isSaddled())
+                renderColoredCutoutModel(model, ResourceLocation.fromNamespaceAndPath(DragonsPlus.MOD_ID, "textures/entity/modenderdragon/modenderdragonsaddle.png"), ps, buffer, light, dragon, -1);
+        }
+    };
 
     @Override
     public ResourceLocation getTextureLocation(ModEnderDragon pEntity) {

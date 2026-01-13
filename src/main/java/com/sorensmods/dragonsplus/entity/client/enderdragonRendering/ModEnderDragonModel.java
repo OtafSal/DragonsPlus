@@ -6,13 +6,14 @@ package com.sorensmods.dragonsplus.entity.client.enderdragonRendering;// Made wi
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.sorensmods.dragonsplus.DragonsPlus;
-import com.sorensmods.dragonsplus.entity.ModEnderDragon;
+import com.sorensmods.dragonsplus.entity.custom.ModEnderDragon;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
 
 public class ModEnderDragonModel<T extends ModEnderDragon> extends HierarchicalModel<T> {
@@ -238,11 +239,21 @@ public class ModEnderDragonModel<T extends ModEnderDragon> extends HierarchicalM
 		 this.root().getAllParts().forEach(ModelPart::resetPose);
 
 		 	//The value below registers the animations' durations.
-		 this.animate(entity.anims.WALKING.animation, ModEnderDragonAnimator.walking, ageInTicks);
+		 this.animate(entity.anims.WALKING.animation, ModEnderDragonAnimator.walking, ageInTicks );
 		 entity.anims.WALKING.animDuration = 20*2;
 
 		 this.animate(entity.anims.IDLE.animation, ModEnderDragonAnimator.Idle, ageInTicks);
 		 entity.anims.IDLE.animDuration = 20*4;
+
+		 this.animate(entity.anims.FLYING.animation, ModEnderDragonAnimator.flying, ageInTicks, 0.8f);
+		 entity.anims.FLYING.animDuration = 20;
+
+		this.animate(entity.anims.FLYING_STILL.animation, ModEnderDragonAnimator.flying_still, ageInTicks, 0.8f);
+		entity.anims.FLYING_STILL.animDuration = 20;
+		//This needs to be fixed
+		if (entity.anims.FLYING_STILL.animation.isStarted()) this.body.xRot = -Mth.PI/4;
+		else this.body.xRot = 0;
+
 
 	}
 

@@ -1,11 +1,12 @@
 package com.sorensmods.dragonsplus.entity;
 
+import com.mojang.logging.LogUtils;
 import net.minecraft.world.entity.AnimationState;
 import org.jetbrains.annotations.Nullable;
 
 public class DragonAnimController {
 
-    DragonAnimController()
+    public DragonAnimController()
     {
         IDLE = new DragonState(0);
         WALKING = new DragonState(0);
@@ -34,7 +35,7 @@ public class DragonAnimController {
                 last.animation.stop();
                 last.animTimeout = 0;
 
-                animation.start(tick);
+                animation.startIfStopped(tick);
                 last = this;
 
                 animTimeout = animDuration;

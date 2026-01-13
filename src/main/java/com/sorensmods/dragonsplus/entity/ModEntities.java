@@ -1,6 +1,7 @@
 package com.sorensmods.dragonsplus.entity;
 
 import com.sorensmods.dragonsplus.DragonsPlus;
+import com.sorensmods.dragonsplus.entity.custom.ModEnderDragon;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraftforge.eventbus.api.IEventBus;
