@@ -1,9 +1,11 @@
 package com.sorensmods.dragonsplus.entity.custom;
 
 
+import com.mojang.logging.LogUtils;
 import com.sorensmods.dragonsplus.entity.DragonAnimController;
 import com.sorensmods.dragonsplus.entity.GenericDragon;
 import com.sorensmods.dragonsplus.entity.ai.DragonMoveController;
+import com.sorensmods.dragonsplus.entity.client.KeyMappings;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -11,6 +13,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.*;
@@ -31,6 +34,7 @@ import net.minecraft.world.item.SaddleItem;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.Tags;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,6 +42,10 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
 
     //Generic code for all dragons
     public GenericDragon base;
+
+    //Saddle data
+    private static final EntityDataAccessor<Boolean> DATA_SADDLED = SynchedEntityData.defineId(ModEnderDragon.class, EntityDataSerializers.BOOLEAN);
+    private static final String NBT_SADDLED = "Saddle";
 
     //Animations
     public DragonAnimController anims = new DragonAnimController();
@@ -116,10 +124,6 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
         return null;
     }
 
-
-    private static final EntityDataAccessor<Boolean> DATA_SADDLED = SynchedEntityData.defineId(ModEnderDragon.class, EntityDataSerializers.BOOLEAN);
-    private static final String NBT_SADDLED = "Saddle";
-
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder)
     {
@@ -153,76 +157,43 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
         entityData.set(DATA_SADDLED, true);
     }
 
-
-    @Override
-    @SuppressWarnings("ConstantConditions") // I bet the breed exists at this point...
-    public InteractionResult mobInteract(Player player, InteractionHand hand)
-    {
-        var stack = player.getItemInHand(hand);
-
-        var stackResult = stack.interactLivingEntity(player, this, hand);
-        if (stackResult.consumesAction()) return stackResult;
-
-        // tame
-        if (!isTame()) {
-            if (!level().isClientSide && stack.is(Tags.Items.FOODS_RAW_FISH)) {
-                stack.shrink(1);
-                tamedFor(player, getRandom().nextInt(5) == 0);
-                return InteractionResult.SUCCESS;
-            }
-
-            return InteractionResult.PASS; // pass regardless. We don't want to perform breeding, age ups, etc. on untamed.
-        }
-
-        // saddle up!
-        if (isTamedFor(player) && isSaddleable() && !isSaddled() && stack.getItem() instanceof SaddleItem)
-        {
-            stack.shrink(1);
-            equipSaddle(stack, getSoundSource());
-            return InteractionResult.sidedSuccess(level().isClientSide);
-        }
-
-        // give the saddle back!
-        if (isTamedFor(player) && isSaddled() && stack.is(Tags.Items.TOOLS_SHEAR))
-        {
-            spawnAtLocation(Items.SADDLE);
-            player.playSound(SoundEvents.SHEEP_SHEAR, 1f, 1f);
-            entityData.set(DATA_SADDLED, false);
-            gameEvent(GameEvent.SHEAR, player);
-            stack.hurtAndBreak(1, player, getSlotForHand(hand));
-
-            return InteractionResult.sidedSuccess(level().isClientSide);
-        }
-
-        return super.mobInteract(player, hand);
-    }
-
-    public void tamedFor(Player player, boolean successful)
-    {
-        if (successful)
-        {
-            tame(player);
-            navigation.stop();
-            setTarget(null);
-            setOwnerUUID(player.getUUID());
-            level().broadcastEntityEvent(this, (byte) 7);
-        }
-        else
-        {
-            level().broadcastEntityEvent(this, (byte) 6);
-        }
-
-    }
-
-    public boolean isTamedFor(Player player)
-    {
-        return isTame() && isOwnedBy(player);
-    }
-
-
     @Override
     public boolean isSaddled() {
         return entityData.get(DATA_SADDLED);
+    }
+
+
+    @Override
+    @SuppressWarnings("ConstantConditions")// I bet the breed exists at this point...
+    public InteractionResult mobInteract(Player player, InteractionHand hand)
+    {
+        var stack = player.getItemInHand(hand);
+        var stackResult = stack.interactLivingEntity(player, this, hand);
+        if (stackResult.consumesAction()) return stackResult;
+
+        // tame!
+        if (!isTame()) {
+            return base.tame(stack, player, navigation);
+        }
+
+        // saddle up!
+        if (base.isTamedFor(player) && isSaddleable() && !isSaddled() && stack.getItem() instanceof SaddleItem)
+        {
+            return base.sadlleUp(stack, entityData, DATA_SADDLED);
+        }
+
+        // give the saddle back!
+        if (base.isTamedFor(player) && isSaddled() && stack.is(Tags.Items.TOOLS_SHEAR))
+        {
+            return base.saddleDown(player, stack, hand, entityData, DATA_SADDLED);
+        }
+
+        // ride on!
+        if (base.isTamedFor(player) && isSaddled() && !isFood(stack))
+        {
+            return base.rideOn(player, navigation);
+        }
+        return super.mobInteract(player, hand);
     }
 
     @Override
@@ -230,4 +201,49 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
     {
         if (!base.travel(vec3)) super.travel(vec3);
     }
+
+    @Override
+    public LivingEntity getControllingPassenger()
+    {
+        return base.getControllingPassenger();
+    }
+
+    @Override
+    protected Vec3 getRiddenInput(Player driver, Vec3 move)
+    {
+        return base.getRiddenInput(driver, move);
+    }
+
+    @Override
+    protected void tickRidden(Player driver, Vec3 move)
+    {
+        base.tickRidden(driver, move);
+        super.tickRidden(driver, move);
+    }
+
+    @Override
+    protected void positionRider(Entity ridden, MoveFunction pCallback)
+    {
+        // fix rider rotation
+        base.fixRot(ridden);
+        super.positionRider(ridden, pCallback);
+    }
+
+    @Override
+    protected float getRiddenSpeed(Player driver)
+    {
+        return base.getRiddenSpeed(driver);
+    }
+    @Override
+    protected void addPassenger(Entity passenger)
+    {
+        super.addPassenger(passenger);
+        base.addPassenger(passenger);
+    }
+    @Override
+    protected void removePassenger(Entity passenger)
+    {
+        super.removePassenger(passenger);
+    }
+
 }

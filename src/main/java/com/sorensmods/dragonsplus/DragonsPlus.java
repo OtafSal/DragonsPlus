@@ -2,11 +2,15 @@ package com.sorensmods.dragonsplus;
 
 import com.mojang.logging.LogUtils;
 import com.sorensmods.dragonsplus.entity.ModEntities;
+import com.sorensmods.dragonsplus.entity.client.KeyMappings;
 import com.sorensmods.dragonsplus.entity.client.enderdragonRendering.ModEnderDragonRenderer;
 import com.sorensmods.dragonsplus.item.ModItems;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.InputEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
@@ -17,7 +21,10 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLLoader;
 import org.slf4j.Logger;
+
+import java.util.function.Consumer;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(DragonsPlus.MOD_ID)
@@ -36,6 +43,11 @@ public class DragonsPlus
 
         // Register the commonSetup method for modloading
         modEventBus.addListener(this::commonSetup);
+
+        //Register custom keybindings
+        if (FMLLoader.getDist() == Dist.CLIENT) {
+            modEventBus.addListener((RegisterKeyMappingsEvent e) -> registerKeyBindings(e::register));
+        }
 
         //Register mobs
         ModEntities.register(modEventBus);
@@ -69,6 +81,11 @@ public class DragonsPlus
             event.accept(ModItems.EndDragonEgg.get());
         }
 
+    }
+
+    static void registerKeyBindings(Consumer<KeyMapping> registrar)
+    {
+        KeyMappings.registerKeybinds(registrar);
     }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call

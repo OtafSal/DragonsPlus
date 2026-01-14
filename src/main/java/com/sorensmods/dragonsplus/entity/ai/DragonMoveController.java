@@ -20,7 +20,7 @@ public class DragonMoveController extends MoveControl
     public void tick()
     {
         // original movement behavior if the entity isn't flying
-        if (dragon.isFlying())
+        if (!dragon.isFlying())
         {
             super.tick();
             return;
