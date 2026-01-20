@@ -50,6 +50,6 @@ public class ModEnderDragonRenderer extends MobRenderer<ModEnderDragon, ModEnder
     @Override
     protected void setupRotations(ModEnderDragon pEntity, PoseStack pPoseStack, float pBob, float pYBodyRot, float pPartialTick, float pScale) {
         super.setupRotations(pEntity, pPoseStack, pBob, pYBodyRot, pPartialTick, pScale);
-        pEntity.anims.setupRotations(pPoseStack, pEntity.base.trunkPitch, 3.5f, 0f);
+        pEntity.anims.setupRotations(pPoseStack, 3.5f, 0f);
     }
 }

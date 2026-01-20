@@ -9,6 +9,8 @@ import com.sorensmods.dragonsplus.entity.client.KeyMappings;
 import com.sorensmods.dragonsplus.entity.client.enderdragonRendering.ModEnderDragonModel;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -16,6 +18,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -30,12 +33,15 @@ import net.minecraft.world.entity.animal.Animal;
 
 import net.minecraft.world.entity.animal.FlyingAnimal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.vehicle.DismountHelper;
 import net.minecraft.world.food.Foods;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.SaddleItem;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.Tags;
@@ -195,6 +201,12 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
             return base.tame(stack, player, navigation);
         }
 
+        //heal!
+        if (getHealth() < getMaxHealth() && stack.is(ItemTags.FISHES))
+        {
+            return base.healDragon(stack);
+        }
+
         // saddle up!
         if (base.isTamedFor(player) && isSaddleable() && !isSaddled() && stack.getItem() instanceof SaddleItem)
         {
@@ -218,8 +230,10 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
     @Override
     public void travel(Vec3 vec3)
     {
-        if (!base.travel(vec3)) super.travel(vec3);
+        if (!base.travel(vec3, 0.1f)) super.travel(vec3);
     }
+
+
 
     @Override
     public LivingEntity getControllingPassenger()
@@ -263,6 +277,19 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
     protected void removePassenger(Entity passenger)
     {
         super.removePassenger(passenger);
+        Vec3 vec31 = new Vec3(passenger.getX(), passenger.getY() - 3, passenger.getZ());
+        passenger.setPos(vec31.x, vec31.y, vec31.z);
+    }
+
+    @Override
+    public Vec3 getDismountLocationForPassenger(LivingEntity pLivingEntity) {
+        return base.getDismountLocationForPassenger(pLivingEntity,
+                getCollisionHorizontalEscapeVector(
+                (double)this.getBbWidth(), (double)pLivingEntity.getBbWidth(), this.getYRot() + (pLivingEntity.getMainArm() == HumanoidArm.RIGHT ? 90.0F : -90.0F)
+        ),
+                getCollisionHorizontalEscapeVector(
+                (double)this.getBbWidth(), (double)pLivingEntity.getBbWidth(), this.getYRot() + (pLivingEntity.getMainArm() == HumanoidArm.LEFT ? 90.0F : -90.0F)
+        ));
     }
 
     @Override

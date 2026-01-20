@@ -13,6 +13,7 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
 
 public class ModEnderDragonModel<T extends ModEnderDragon> extends HierarchicalModel<T> {
@@ -266,7 +267,7 @@ public class ModEnderDragonModel<T extends ModEnderDragon> extends HierarchicalM
 			this.animateWalk(ModEnderDragonAnimations.walking, limbSwing, limbSwingAmount, 4, 2.5f);
 		}
 
-		entity.anims.bodyXRot(-60, entity.base.flying , entity.base.movingFly);
+		entity.anims.bodyXRot(-60, entity.base.angleX, entity.base.flying , entity.base.movingFly);
 		headPitch -= entity.anims.angleStoppedMod;
 
 
@@ -281,6 +282,7 @@ public class ModEnderDragonModel<T extends ModEnderDragon> extends HierarchicalM
 
 
 		 entity.anims.applyHeadRotation(netHeadYaw, headPitch, 6);
+		 entity.anims.applyTailRotation(-netHeadYaw*2,entity.base.flying ? -headPitch*2 : 0, 12);
 
 
 	}

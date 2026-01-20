@@ -3,27 +3,30 @@ package com.sorensmods.dragonsplus.entity;
 import com.mojang.logging.LogUtils;
 import com.sorensmods.dragonsplus.entity.client.KeyMappings;
 import com.sorensmods.dragonsplus.util.Lerp;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.vehicle.DismountHelper;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.Tags;
+import org.jetbrains.annotations.Nullable;
 
 public class GenericDragon {
 
@@ -114,7 +117,7 @@ public class GenericDragon {
             soaring = movingFly && entity.getDeltaMovement().y <= 0;
 
             //variable to accelerate the dragon when soaring
-            if (movingFly) speedBonus += Lerp.interpolation(speedBonus, soaring ? MAX_SPEED : 0, ACCELERATION);
+            if (movingFly) speedBonus += (float) Lerp.interpolation(speedBonus, soaring ? MAX_SPEED : 0, Mth.abs((float) (ACCELERATION*entity.getDeltaMovement().y)));
             else speedBonus = 0;
 
             if (speedBonus < 0) speedBonus = 0;
@@ -138,7 +141,7 @@ public class GenericDragon {
 
 
 
-    public boolean travel(Vec3 vec3)
+    public boolean travel(Vec3 vec3, float flutterLoop)
     {
         if (isFlying())
         {
@@ -148,7 +151,7 @@ public class GenericDragon {
                 entity.moveRelative(entity.getSpeed() + speedBonus, vec3);
                 entity.move(MoverType.SELF, entity.getDeltaMovement());
                 if (entity.getDeltaMovement().lengthSqr() < 0.1) // we're not actually going anywhere, bob up and down.
-                    entity.setDeltaMovement(entity.getDeltaMovement().add(0, Math.sin(entity.tickCount / 4f) * 0.03, 0));
+                    entity.setDeltaMovement(entity.getDeltaMovement().add(0, Math.sin(entity.tickCount*flutterLoop) * 0.03, 0));
                 entity.setDeltaMovement(entity.getDeltaMovement().scale(0.9f)); // smoothly slow down
             }
 
@@ -186,6 +189,15 @@ public class GenericDragon {
 
     }
 
+     public InteractionResult healDragon(ItemStack stack)
+     {
+         //noinspection ConstantConditions
+
+         entity.heal(stack.get(DataComponents.FOOD).nutrition());
+         entity.playSound(entity.getEatingSound(stack), 0.7f, 1);
+         stack.shrink(1);
+         return InteractionResult.sidedSuccess(entity.level().isClientSide);
+     }
 
     //Saddle up
     public InteractionResult sadlleUp(ItemStack stack, SynchedEntityData entityData, EntityDataAccessor<Boolean> DATA_SADDLED)
@@ -223,7 +235,6 @@ public class GenericDragon {
 
     public Vec3 getRiddenInput(Player driver, Vec3 move)
     {
-        double moveSideways = move.x;
         double moveY = move.y;
         double moveForward = Math.min(Math.abs(driver.zza) + Math.abs(driver.xxa), 1);
 
@@ -232,9 +243,11 @@ public class GenericDragon {
 
             if (hasLocalDriver()) {
                 moveForward = moveForward > 0 ? moveForward : 0;
-                if (KeyMappings.FLIGHT_ASCEND_KEY.isDown()) moveY = 1;
-                else if (KeyMappings.FLIGHT_DESCENT_KEY.isDown()) moveY = -1;
-                else if (moveForward > 0) moveY = -driver.getXRot() / 90; // normalize from -1 to 1
+                if (!movingFly) {
+                    if (KeyMappings.FLIGHT_ASCEND_KEY.isDown()) moveY = 1;
+                    else if (KeyMappings.FLIGHT_DESCENT_KEY.isDown()) moveY = -1;
+                }
+                else moveY = -driver.getXRot() / 90; // normalize from -1 to 1
             }
         }
 
@@ -247,7 +260,7 @@ public class GenericDragon {
         // so when moveRelative calculates movespeed, (walkforward * speed) we get 0.15.
         // so I guess we should do it to.
         var speed = getRiddenSpeed(driver);
-        return new Vec3(moveSideways * speed, moveY * speed, moveForward * speed);
+        return new Vec3(0, moveY * speed, moveForward * speed);
     }
     boolean hasLocalDriver()
     {
@@ -259,8 +272,7 @@ public class GenericDragon {
         return entity.isTame() && entity.isOwnedBy(player);
     }
 
-    //Used to rotate the body vertically
-    public float trunkPitch = 0;
+
     public void tickRidden(Player driver, Vec3 move)
     {
         // rotate head to match driver.
@@ -268,22 +280,12 @@ public class GenericDragon {
         if (move.z > 0) // rotate in the direction of the drivers controls
             yaw += (float) Mth.atan2(driver.zza, driver.xxa) * (180f / (float) Math.PI) - 90;
         entity.yHeadRot = yaw;
-        //This variable is also acceced in the dragon animator controller;
+        //This variable is also accessed in the dragon animator controller;
         angleX = driver.getXRot() * 0.68f;
         entity.setXRot(angleX);
         // rotate body towards the head
         entity.setYRot(Mth.rotateIfNecessary(entity.yHeadRot, entity.getYRot(), 4));
 
-        //Only rotate vertically when flying
-        if (flying)
-        {
-            if (movingFly) {
-                trunkPitch = Mth.rotateIfNecessary(angleX, trunkPitch / (Mth.PI / 180), 4) * (Mth.PI / 180);
-            }
-            else {
-                trunkPitch += (float) Lerp.interpolation(trunkPitch, 0, 0.1f);
-            }
-        }
 
         if (entity.isControlledByLocalInstance())
         {
@@ -318,6 +320,51 @@ public class GenericDragon {
         {
             passenger.setYRot(entity.getYRot());
             passenger.setXRot(entity.getXRot());
+        }
+    }
+
+
+    private Vec3 getDismountLocationInDirection(Vec3 pDirection, LivingEntity pPassenger) {
+        double d0 = entity.getX() + pDirection.x;
+        double d1 = entity.getBoundingBox().minY;
+        double d2 = entity.getZ() + pDirection.z;
+        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+
+        for (Pose pose : pPassenger.getDismountPoses()) {
+            blockpos$mutableblockpos.set(d0, d1, d2);
+            double d3 = entity.getBoundingBox().maxY + 0.75;
+
+            do {
+                double d4 = entity.level().getBlockFloorHeight(blockpos$mutableblockpos);
+                if ((double)blockpos$mutableblockpos.getY() + d4 > d3) {
+                    break;
+                }
+
+                if (DismountHelper.isBlockFloorValid(d4)) {
+                    AABB aabb = pPassenger.getLocalBoundsForPose(pose);
+                    Vec3 vec3 = new Vec3(d0, (double)blockpos$mutableblockpos.getY() + d4, d2);
+                    if (DismountHelper.canDismountTo(entity.level(), pPassenger, aabb.move(vec3))) {
+                        pPassenger.setPose(pose);
+                        return vec3;
+                    }
+                }
+
+                blockpos$mutableblockpos.move(Direction.UP);
+            } while (!((double)blockpos$mutableblockpos.getY() < d3));
+        }
+
+        return null;
+    }
+
+    public Vec3 getDismountLocationForPassenger(LivingEntity pLivingEntity, Vec3 escapeVector1, Vec3 escapeVector2) {
+        Vec3 vec3 = escapeVector1;
+        Vec3 vec31 = this.getDismountLocationInDirection(vec3, pLivingEntity);
+        if (vec31 != null) {
+            return vec31;
+        } else {
+            Vec3 vec32 = escapeVector2;
+            Vec3 vec33 = this.getDismountLocationInDirection(vec32, pLivingEntity);
+            return vec33 != null ? vec33 : entity.position();
         }
     }
 

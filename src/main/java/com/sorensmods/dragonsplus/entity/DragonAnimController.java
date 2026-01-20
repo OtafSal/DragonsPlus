@@ -101,6 +101,9 @@ public class DragonAnimController {
 
     //This part is for the spine control
 
+    //Used to rotate the dragon vertically
+    public float trunkPitch = 0;
+
     public void applyHeadRotation(float pNetHeadYaw, float pHeadPitch, int size)
     {
             pNetHeadYaw = Mth.clamp(pNetHeadYaw, -30.0F, 30.0F);
@@ -139,30 +142,23 @@ public class DragonAnimController {
     }
 
     public float angleStoppedMod = 0;
-    public void bodyXRot(float stopAngle, boolean flying , boolean moving) {
-        float stopStep = 1f;
-        float flightStep = 1f;
+    public float followingAngleMod = 0;
 
-        //Always reset to less than 360°
-        angleStoppedMod %= 360;
+    public void bodyXRot(float stopAngle, float angleToFollow, boolean flying , boolean moving) {
+        float Step = 1f;
 
-        if (flying) {
-            angleStoppedMod += (float) Lerp.interpolation(angleStoppedMod,moving ? 0 : stopAngle, stopStep);
-        }
-        else {
-            angleStoppedMod += (float) Lerp.interpolation(angleStoppedMod,0, flightStep);
-        }
+        angleStoppedMod += (float) Lerp.interpolation(angleStoppedMod,flying && !moving ? stopAngle : 0, Step);
+        followingAngleMod += (float) Lerp.interpolation(followingAngleMod,flying && moving ? angleToFollow : 0, Step);
 
-        angleStoppedMod *= (Mth.PI/180f);
+        trunkPitch = angleStoppedMod + followingAngleMod;
     }
 
 
-    public void setupRotations(PoseStack ps, float trunkPitch, float offsY, float offsZ)
+    public void setupRotations(PoseStack ps, float offsY, float offsZ)
     {
         ps.translate(0,0,0);
         ps.translate(0, offsY, offsZ); // change rotation point
-        ps.mulPose(Axis.XP.rotationDegrees(-(trunkPitch + angleStoppedMod)/(float) (Math.PI / 180.0))); // rotate near the saddle so we can support the player
-        LogUtils.getLogger().debug(angleStoppedMod + "");
+        ps.mulPose(Axis.XP.rotationDegrees(-trunkPitch)); // rotate near the saddle so we can support the player
         ps.translate(0, -offsY, -offsZ); // restore rotation point
     }
 
