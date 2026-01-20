@@ -13,6 +13,8 @@ public class ModEnderDragonRenderer extends MobRenderer<ModEnderDragon, ModEnder
     public ModEnderDragonRenderer(EntityRendererProvider.Context pContext) {
         super(pContext, new ModEnderDragonModel<>(pContext.bakeLayer(ModEnderDragonModel.LAYER_LOCATION)), 1.5f);
 
+
+
         addLayer(SADDLE_LAYER);
     }
 
@@ -43,5 +45,11 @@ public class ModEnderDragonRenderer extends MobRenderer<ModEnderDragon, ModEnder
     @Override
     public ResourceLocation getTextureLocation(ModEnderDragon pEntity) {
         return ResourceLocation.fromNamespaceAndPath(DragonsPlus.MOD_ID, "textures/entity/modenderdragon/modenderdragonbody.png");
+    }
+
+    @Override
+    protected void setupRotations(ModEnderDragon pEntity, PoseStack pPoseStack, float pBob, float pYBodyRot, float pPartialTick, float pScale) {
+        super.setupRotations(pEntity, pPoseStack, pBob, pYBodyRot, pPartialTick, pScale);
+        pEntity.anims.setupRotations(pPoseStack, pEntity.base.trunkPitch, 3.5f, 0f);
     }
 }

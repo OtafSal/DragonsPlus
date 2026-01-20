@@ -6,6 +6,9 @@ import com.sorensmods.dragonsplus.entity.DragonAnimController;
 import com.sorensmods.dragonsplus.entity.GenericDragon;
 import com.sorensmods.dragonsplus.entity.ai.DragonMoveController;
 import com.sorensmods.dragonsplus.entity.client.KeyMappings;
+import com.sorensmods.dragonsplus.entity.client.enderdragonRendering.ModEnderDragonModel;
+import net.minecraft.client.model.HierarchicalModel;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -38,6 +41,9 @@ import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.Tags;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingAnimal, PlayerRideable {
 
     //Generic code for all dragons
@@ -47,8 +53,8 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
     private static final EntityDataAccessor<Boolean> DATA_SADDLED = SynchedEntityData.defineId(ModEnderDragon.class, EntityDataSerializers.BOOLEAN);
     private static final String NBT_SADDLED = "Saddle";
 
-    //Animations
-    public DragonAnimController anims = new DragonAnimController();
+    //Animation controller (animations + spine register)
+    public DragonAnimController anims = new DragonAnimController(this, 20);
 
 
     /**
@@ -69,6 +75,9 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
         navigation = base.groundNavigation;
 
         noCulling = true;
+
+        anims.UpperSpine = new ArrayList<>();
+        anims.LowerSpine = new ArrayList<>();
     }
 
     public static AttributeSupplier.Builder Properties()
@@ -94,8 +103,8 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
         this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 1.0));
         targetSelector.addGoal(3, new NonTameRandomTargetGoal<>(this, Animal.class, false, e -> (e instanceof Animal)));
 
-        //this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
-        //this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
+        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
     }
 
 
@@ -106,8 +115,18 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
     {
         super.tick();
 
-        base.setAnims(anims);
         navigation = base.updateVars(navigation);
+
+        if (base.isFlying()) {
+            anims.AnimateLiftOff();
+            if (!base.soaring) {
+                anims.AnimateFlap();
+            } else {
+                anims.StopFlap();
+            }
+        } else {
+            anims.AnimateIdle();
+        }
     }
 
 
@@ -245,5 +264,11 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
     {
         super.removePassenger(passenger);
     }
+
+    @Override
+    public boolean onClimbable() {
+        return false;
+    }
+
 
 }

@@ -13,7 +13,6 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
 
 public class ModEnderDragonModel<T extends ModEnderDragon> extends HierarchicalModel<T> {
@@ -120,7 +119,7 @@ public class ModEnderDragonModel<T extends ModEnderDragon> extends HierarchicalM
 		PartDefinition body = partdefinition.addOrReplaceChild("body", CubeListBuilder.create().texOffs(0, 0).addBox(-12.0F, -7.0F, -32.0F, 24.0F, 24.0F, 64.0F, new CubeDeformation(0.0F))
 				.texOffs(220, 53).addBox(-1.0F, -13.0F, -26.0F, 2.0F, 6.0F, 12.0F, new CubeDeformation(0.0F))
 				.texOffs(220, 53).addBox(-1.0F, -13.0F, -6.0F, 2.0F, 6.0F, 12.0F, new CubeDeformation(0.0F))
-				.texOffs(220, 53).addBox(-1.0F, -13.0F, 14.0F, 2.0F, 6.0F, 12.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, -27.0F, 0.0F));
+				.texOffs(220, 53).addBox(-1.0F, -13.0F, 14.0F, 2.0F, 6.0F, 12.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, -25.0F, 20.0F));
 
 		PartDefinition left_wing = body.addOrReplaceChild("left_wing", CubeListBuilder.create().texOffs(112, 88).mirror().addBox(0.0F, -4.0F, -4.0F, 56.0F, 8.0F, 8.0F, new CubeDeformation(0.0F)).mirror(false), PartPose.offset(12.0F, -6.0F, -22.0F));
 
@@ -238,21 +237,50 @@ public class ModEnderDragonModel<T extends ModEnderDragon> extends HierarchicalM
 	public void setupAnim(ModEnderDragon entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
 		 this.root().getAllParts().forEach(ModelPart::resetPose);
 
-		 	//The value below registers the animations' durations.
-		 this.animate(entity.anims.WALKING.animation, ModEnderDragonAnimator.walking, ageInTicks );
-		 entity.anims.WALKING.animDuration = 20*2;
+		//Set the modelParts for the spine
+		entity.anims.UpperSpine.add(head);
+		entity.anims.UpperSpine.add(neck1);
+		entity.anims.UpperSpine.add(neck2);
+		entity.anims.UpperSpine.add(neck3);
+		entity.anims.UpperSpine.add(neck4);
+		entity.anims.UpperSpine.add(neck5);
 
-		 this.animate(entity.anims.IDLE.animation, ModEnderDragonAnimator.Idle, ageInTicks);
-		 entity.anims.IDLE.animDuration = 20*4;
+		entity.anims.Trunk = root();
 
-		 this.animate(entity.anims.FLYING.animation, ModEnderDragonAnimator.flying, ageInTicks, 0.8f);
-		 entity.anims.FLYING.animDuration = 20;
+		entity.anims.LowerSpine.add(0, tail1);
+		entity.anims.LowerSpine.add(1, tail2);
+		entity.anims.LowerSpine.add(2, tail3);
+		entity.anims.LowerSpine.add(3, tail4);
+		entity.anims.LowerSpine.add(4, tail5);
+		entity.anims.LowerSpine.add(5, tail6);
+		entity.anims.LowerSpine.add(6, tail7);
+		entity.anims.LowerSpine.add(7, tail8);
+		entity.anims.LowerSpine.add(8, tail9);
+		entity.anims.LowerSpine.add(9, tail10);
+		entity.anims.LowerSpine.add(10, tail11);
+		entity.anims.LowerSpine.add(11, tail12);
 
-		this.animate(entity.anims.FLYING_STILL.animation, ModEnderDragonAnimator.flying_still, ageInTicks, 0.8f);
-		entity.anims.FLYING_STILL.animDuration = 20;
-		//This needs to be fixed
-		if (entity.anims.FLYING_STILL.animation.isStarted()) this.body.xRot = -Mth.PI/4;
-		else this.body.xRot = 0;
+
+		//Only animates when in ground
+		if (!entity.base.isFlying()) {
+			this.animateWalk(ModEnderDragonAnimations.walking, limbSwing, limbSwingAmount, 4, 2.5f);
+		}
+
+		entity.anims.bodyXRot(-60, entity.base.flying , entity.base.movingFly);
+		headPitch -= entity.anims.angleStoppedMod;
+
+
+		 this.animate(entity.anims.IDLE, ModEnderDragonAnimations.Idle, ageInTicks);
+
+		 this.animate(entity.anims.FLYING, ModEnderDragonAnimations.flying, ageInTicks);
+		 this.animate(entity.anims.LIFTOFF, ModEnderDragonAnimations.liftoff, ageInTicks);
+		 this.animate(entity.anims.LANDING, ModEnderDragonAnimations.landing, ageInTicks);
+
+		 this.animate(entity.anims.SITTING, ModEnderDragonAnimations.Sitting, ageInTicks);
+		 this.animate(entity.anims.STANDING, ModEnderDragonAnimations.Standing, ageInTicks);
+
+
+		 entity.anims.applyHeadRotation(netHeadYaw, headPitch, 6);
 
 
 	}

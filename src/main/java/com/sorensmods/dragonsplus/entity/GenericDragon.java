@@ -1,9 +1,9 @@
 package com.sorensmods.dragonsplus.entity;
 
+import com.mojang.logging.LogUtils;
 import com.sorensmods.dragonsplus.entity.client.KeyMappings;
-import com.sorensmods.dragonsplus.entity.custom.ModEnderDragon;
+import com.sorensmods.dragonsplus.util.Lerp;
 import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
@@ -17,7 +17,6 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
-import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -36,6 +35,15 @@ public class GenericDragon {
     public boolean flying;
     public boolean nearGround;
 
+    public boolean soaring;
+    public boolean movingFly;
+    public boolean sit;
+
+    float speedBonus = 0;
+    final float ACCELERATION;
+    final float MAX_SPEED;
+    public float angleX;
+
 
 
     public GenericDragon(TamableAnimal entityGet)
@@ -48,6 +56,8 @@ public class GenericDragon {
         flyingNavigation.setCanFloat(true);
         groundNavigation.setCanFloat(true);
 
+        ACCELERATION = (float) (entity.getAttribute(Attributes.FLYING_SPEED).getValue()/10);
+        MAX_SPEED = (float) (entity.getAttribute(Attributes.FLYING_SPEED).getValue()*2 );
 
     }
 
@@ -96,6 +106,27 @@ public class GenericDragon {
             // update pathfinding method
             if (!entity.level().isClientSide) navigation = setNavigation(flying);
         }
+
+
+        if (isFlying())
+        {
+            movingFly = Mth.abs((float) entity.getDeltaMovement().x) + Mth.abs((float) entity.getDeltaMovement().z) >= 0.4f;
+            soaring = movingFly && entity.getDeltaMovement().y <= 0;
+
+            //variable to accelerate the dragon when soaring
+            if (movingFly) speedBonus += Lerp.interpolation(speedBonus, soaring ? MAX_SPEED : 0, ACCELERATION);
+            else speedBonus = 0;
+
+            if (speedBonus < 0) speedBonus = 0;
+            if (speedBonus > MAX_SPEED) speedBonus = MAX_SPEED;
+        }
+        else {
+            //reset acceleration
+            speedBonus = 0;
+            movingFly = false;
+            soaring = false;
+        }
+
         return navigation;
     }
 
@@ -106,24 +137,6 @@ public class GenericDragon {
     }
 
 
-    public void setAnims(DragonAnimController anims)
-    {
-        if (!this.isFlying()) {
-            if (entity.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6D) {
-                anims.WALKING.Animate(entity.tickCount);
-            } else {
-                anims.IDLE.Animate(entity.tickCount);
-            }
-        }
-        else
-        {
-            if (entity.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6D) {
-                anims.FLYING.Animate(entity.tickCount);
-            } else {
-                anims.FLYING_STILL.Animate(entity.tickCount);
-            }
-        }
-    }
 
     public boolean travel(Vec3 vec3)
     {
@@ -132,7 +145,7 @@ public class GenericDragon {
             if (entity.isControlledByLocalInstance())
             {
                 // Move relative to yaw - handled in the move controller or by driver
-                entity.moveRelative(entity.getSpeed(), vec3);
+                entity.moveRelative(entity.getSpeed() + speedBonus, vec3);
                 entity.move(MoverType.SELF, entity.getDeltaMovement());
                 if (entity.getDeltaMovement().lengthSqr() < 0.1) // we're not actually going anywhere, bob up and down.
                     entity.setDeltaMovement(entity.getDeltaMovement().add(0, Math.sin(entity.tickCount / 4f) * 0.03, 0));
@@ -214,13 +227,17 @@ public class GenericDragon {
         double moveY = move.y;
         double moveForward = Math.min(Math.abs(driver.zza) + Math.abs(driver.xxa), 1);
 
-        if (isFlying() && hasLocalDriver())
+        if (isFlying())
         {
-            moveForward = moveForward > 0? moveForward : 0;
-            if (KeyMappings.FLIGHT_ASCEND_KEY.isDown()) moveY = 1;
-            else if (KeyMappings.FLIGHT_DESCENT_KEY.isDown()) moveY = -1;
-            else if (moveForward > 0) moveY = -driver.getXRot() / 90; // normalize from -1 to 1
+
+            if (hasLocalDriver()) {
+                moveForward = moveForward > 0 ? moveForward : 0;
+                if (KeyMappings.FLIGHT_ASCEND_KEY.isDown()) moveY = 1;
+                else if (KeyMappings.FLIGHT_DESCENT_KEY.isDown()) moveY = -1;
+                else if (moveForward > 0) moveY = -driver.getXRot() / 90; // normalize from -1 to 1
+            }
         }
+
 
         // mimic ****** implementation of AI movement vectors
         // the way this works is that it will mimic how setSpeed in Mob works:
@@ -242,6 +259,8 @@ public class GenericDragon {
         return entity.isTame() && entity.isOwnedBy(player);
     }
 
+    //Used to rotate the body vertically
+    public float trunkPitch = 0;
     public void tickRidden(Player driver, Vec3 move)
     {
         // rotate head to match driver.
@@ -249,10 +268,22 @@ public class GenericDragon {
         if (move.z > 0) // rotate in the direction of the drivers controls
             yaw += (float) Mth.atan2(driver.zza, driver.xxa) * (180f / (float) Math.PI) - 90;
         entity.yHeadRot = yaw;
-        entity.setXRot(driver.getXRot() * 0.68f);
-
+        //This variable is also acceced in the dragon animator controller;
+        angleX = driver.getXRot() * 0.68f;
+        entity.setXRot(angleX);
         // rotate body towards the head
         entity.setYRot(Mth.rotateIfNecessary(entity.yHeadRot, entity.getYRot(), 4));
+
+        //Only rotate vertically when flying
+        if (flying)
+        {
+            if (movingFly) {
+                trunkPitch = Mth.rotateIfNecessary(angleX, trunkPitch / (Mth.PI / 180), 4) * (Mth.PI / 180);
+            }
+            else {
+                trunkPitch += (float) Lerp.interpolation(trunkPitch, 0, 0.1f);
+            }
+        }
 
         if (entity.isControlledByLocalInstance())
         {
