@@ -199,6 +199,17 @@ public class GenericDragon {
          return InteractionResult.sidedSuccess(entity.level().isClientSide);
      }
 
+     public InteractionResult sit(PathNavigation navigation)
+     {
+         if (!entity.level().isClientSide)
+         {
+             navigation.stop();
+             entity.setOrderedToSit(!entity.isOrderedToSit());
+             if (entity.isOrderedToSit()) entity.setTarget(null);
+         }
+         return InteractionResult.sidedSuccess(entity.level().isClientSide);
+     }
+
     //Saddle up
     public InteractionResult sadlleUp(ItemStack stack, SynchedEntityData entityData, EntityDataAccessor<Boolean> DATA_SADDLED)
     {

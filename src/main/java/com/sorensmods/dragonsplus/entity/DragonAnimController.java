@@ -26,6 +26,12 @@ public class DragonAnimController {
     boolean liftoffTrg = true;
     boolean landingTrg = true;
 
+    boolean sittingTrg = true;
+    boolean standingTrg = true;
+
+    //Used to offset the model when sitting
+    float modelPosOfs = 0;
+
 
     //Variables using to control the dragon's spine
     public List<ModelPart> UpperSpine;
@@ -63,10 +69,37 @@ public class DragonAnimController {
         }
     }
 
+    public void animateSitting(boolean sitting, float ofs, float step) {
+        if (sitting && sittingTrg)
+        {
+            if (!SITTING.isStarted()) {
+                LANDING.stop();
+                STANDING.stop();
+                SITTING.start(entity.tickCount);
+            }
+
+            sittingTrg = false;
+            standingTrg = true;
+        }
+        else if (!sitting && standingTrg)
+        {
+            if (SITTING.isStarted()) {
+                SITTING.stop();
+                STANDING.start(entity.tickCount);
+            }
+
+            sittingTrg = true;
+            standingTrg = false;
+        }
+
+        modelPosOfs += (float) Lerp.interpolation(modelPosOfs,sitting ? ofs : 0, step);
+    }
+
     public void AnimateLiftOff()
     {
         if (liftoffTrg) {
             LANDING.stop();
+            STANDING.stop();
             LIFTOFF.start(entity.tickCount);
 
             landingTrg = true;
@@ -156,7 +189,7 @@ public class DragonAnimController {
 
     public void setupRotations(PoseStack ps, float offsY, float offsZ)
     {
-        ps.translate(0,0,0);
+        ps.translate(0,modelPosOfs,0);
         ps.translate(0, offsY, offsZ); // change rotation point
         ps.mulPose(Axis.XP.rotationDegrees(-trunkPitch)); // rotate near the saddle so we can support the player
         ps.translate(0, -offsY, -offsZ); // restore rotation point

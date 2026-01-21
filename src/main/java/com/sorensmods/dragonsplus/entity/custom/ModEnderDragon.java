@@ -84,6 +84,7 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
 
         anims.UpperSpine = new ArrayList<>();
         anims.LowerSpine = new ArrayList<>();
+
     }
 
     public static AttributeSupplier.Builder Properties()
@@ -111,6 +112,8 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
 
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
+
+        this.goalSelector.addGoal(2, new SitWhenOrderedToGoal(this));
     }
 
 
@@ -122,16 +125,22 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
         super.tick();
 
         navigation = base.updateVars(navigation);
+            if (level().isClientSide) {
 
-        if (base.isFlying()) {
-            anims.AnimateLiftOff();
-            if (!base.soaring) {
-                anims.AnimateFlap();
-            } else {
-                anims.StopFlap();
-            }
-        } else {
-            anims.AnimateIdle();
+                //Animations
+                if (base.isFlying()) {
+                    anims.AnimateLiftOff();
+                    if (!base.soaring) {
+                        anims.AnimateFlap();
+                    } else {
+                        anims.StopFlap();
+                    }
+                } else {
+                    anims.AnimateIdle();
+                }
+
+                calculateEntityAnimation(true);
+                anims.animateSitting(isInSittingPose(), -1.5f, 0.07f);
         }
     }
 
@@ -201,6 +210,12 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
             return base.tame(stack, player, navigation);
         }
 
+        // sit!
+        if (base.isTamedFor(player) && (player.isSecondaryUseActive() || stack.is(Items.BONE))) // "bone sitting" for legacy reasons
+        {
+            return base.sit(navigation);
+        }
+
         //heal!
         if (getHealth() < getMaxHealth() && stack.is(ItemTags.FISHES))
         {
@@ -224,6 +239,7 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
         {
             return base.rideOn(player, navigation);
         }
+
         return super.mobInteract(player, hand);
     }
 
