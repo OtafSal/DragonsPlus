@@ -1,6 +1,7 @@
 package com.sorensmods.dragonsplus.entity.client.enderdragonRendering;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.logging.LogUtils;
 import com.sorensmods.dragonsplus.DragonsPlus;
 import com.sorensmods.dragonsplus.entity.custom.ModEnderDragon;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -12,8 +13,6 @@ import net.minecraft.resources.ResourceLocation;
 public class ModEnderDragonRenderer extends MobRenderer<ModEnderDragon, ModEnderDragonModel<ModEnderDragon>> {
     public ModEnderDragonRenderer(EntityRendererProvider.Context pContext) {
         super(pContext, new ModEnderDragonModel<>(pContext.bakeLayer(ModEnderDragonModel.LAYER_LOCATION)), 1.5f);
-
-
 
         addLayer(SADDLE_LAYER);
     }
@@ -50,6 +49,8 @@ public class ModEnderDragonRenderer extends MobRenderer<ModEnderDragon, ModEnder
     @Override
     protected void setupRotations(ModEnderDragon pEntity, PoseStack pPoseStack, float pBob, float pYBodyRot, float pPartialTick, float pScale) {
         super.setupRotations(pEntity, pPoseStack, pBob, pYBodyRot, pPartialTick, pScale);
+
+        pPoseStack.translate(0, pEntity.anims.setYOfs(pEntity.isInSittingPose(), -1.5f, 0.015f), 0);
         pEntity.anims.setupRotations(pPoseStack, 3.5f, 0f);
     }
 }

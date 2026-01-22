@@ -5,6 +5,7 @@ package com.sorensmods.dragonsplus.entity.client.enderdragonRendering;// Made wi
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.logging.LogUtils;
 import com.sorensmods.dragonsplus.DragonsPlus;
 import com.sorensmods.dragonsplus.entity.custom.ModEnderDragon;
 import net.minecraft.client.model.HierarchicalModel;
@@ -235,8 +236,8 @@ public class ModEnderDragonModel<T extends ModEnderDragon> extends HierarchicalM
 	}
 
 	@Override
-	public void setupAnim(ModEnderDragon entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-		 this.root().getAllParts().forEach(ModelPart::resetPose);
+	public void prepareMobModel(T entity, float pLimbSwing, float pLimbSwingAmount, float pPartialTick) {
+		super.prepareMobModel(entity, pLimbSwing, pLimbSwingAmount, pPartialTick);
 
 		//Set the modelParts for the spine
 		entity.anims.UpperSpine.add(head);
@@ -260,11 +261,16 @@ public class ModEnderDragonModel<T extends ModEnderDragon> extends HierarchicalM
 		entity.anims.LowerSpine.add(9, tail10);
 		entity.anims.LowerSpine.add(10, tail11);
 		entity.anims.LowerSpine.add(11, tail12);
+	}
+
+	@Override
+	public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+		 this.root().getAllParts().forEach(ModelPart::resetPose);
 
 
 		//Only animates when in ground
 		if (!entity.base.isFlying()) {
-			this.animateWalk(ModEnderDragonAnimations.walking, limbSwing, limbSwingAmount, 4, 2.5f);
+			this.animateWalk(ModEnderDragonAnimations.walking, limbSwing, limbSwingAmount, 2, 2.5f);
 		}
 
 		entity.anims.bodyXRot(-60, entity.base.angleX, entity.base.flying , entity.base.movingFly);

@@ -8,6 +8,7 @@ import com.sorensmods.dragonsplus.util.Lerp;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.AnimationState;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.TamableAnimal;
 
 import java.util.List;
@@ -29,8 +30,7 @@ public class DragonAnimController {
     boolean sittingTrg = true;
     boolean standingTrg = true;
 
-    //Used to offset the model when sitting
-    float modelPosOfs = 0;
+    float offsetY = 0;
 
 
     //Variables using to control the dragon's spine
@@ -69,7 +69,7 @@ public class DragonAnimController {
         }
     }
 
-    public void animateSitting(boolean sitting, float ofs, float step) {
+    public void animateSitting(boolean sitting) {
         if (sitting && sittingTrg)
         {
             if (!SITTING.isStarted()) {
@@ -91,9 +91,15 @@ public class DragonAnimController {
             sittingTrg = true;
             standingTrg = false;
         }
-
-        modelPosOfs += (float) Lerp.interpolation(modelPosOfs,sitting ? ofs : 0, step);
     }
+
+    //Y offset must be calculated separatedly in the renderer
+    public float setYOfs(boolean isSitting, float sitY, float step)
+    {
+        offsetY += (float) Lerp.interpolation(offsetY, isSitting ? sitY : 0, step);
+        return offsetY;
+    }
+
 
     public void AnimateLiftOff()
     {
@@ -189,11 +195,9 @@ public class DragonAnimController {
 
     public void setupRotations(PoseStack ps, float offsY, float offsZ)
     {
-        ps.translate(0,modelPosOfs,0);
+        ps.translate(0,0,0);
         ps.translate(0, offsY, offsZ); // change rotation point
         ps.mulPose(Axis.XP.rotationDegrees(-trunkPitch)); // rotate near the saddle so we can support the player
         ps.translate(0, -offsY, -offsZ); // restore rotation point
     }
-
-
 }

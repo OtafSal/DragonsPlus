@@ -125,24 +125,25 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
         super.tick();
 
         navigation = base.updateVars(navigation);
-            if (level().isClientSide) {
 
-                //Animations
-                if (base.isFlying()) {
-                    anims.AnimateLiftOff();
-                    if (!base.soaring) {
-                        anims.AnimateFlap();
-                    } else {
-                        anims.StopFlap();
-                    }
+            //Animations
+            if (base.isFlying()) {
+                anims.AnimateLiftOff();
+                if (!base.soaring) {
+                    anims.AnimateFlap();
                 } else {
-                    anims.AnimateIdle();
+                    anims.StopFlap();
                 }
+            } else {
+                anims.AnimateIdle();
+            }
 
-                calculateEntityAnimation(true);
-                anims.animateSitting(isInSittingPose(), -1.5f, 0.07f);
-        }
+            calculateEntityAnimation(true);
+            anims.animateSitting(isInSittingPose());
+
     }
+
+
 
 
     @Override
@@ -211,7 +212,7 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
         }
 
         // sit!
-        if (base.isTamedFor(player) && (player.isSecondaryUseActive() || stack.is(Items.BONE))) // "bone sitting" for legacy reasons
+        if (base.isTamedFor(player) && (player.isSecondaryUseActive() || stack.is(Items.BONE) || isInSittingPose())) // "bone sitting" for legacy reasons
         {
             return base.sit(navigation);
         }
@@ -235,7 +236,7 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
         }
 
         // ride on!
-        if (base.isTamedFor(player) && isSaddled() && !isFood(stack))
+        if (base.isTamedFor(player) && isSaddled() && !isFood(stack) && !isInSittingPose())
         {
             return base.rideOn(player, navigation);
         }
