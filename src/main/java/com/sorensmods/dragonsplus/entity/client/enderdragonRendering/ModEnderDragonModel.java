@@ -16,6 +16,7 @@ import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
+import org.jline.utils.Log;
 
 public class ModEnderDragonModel<T extends ModEnderDragon> extends HierarchicalModel<T> {
 	public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DragonsPlus.MOD_ID, "modenderdragon"), "main");

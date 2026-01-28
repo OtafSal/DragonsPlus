@@ -190,6 +190,7 @@ public class DragonAnimController {
         followingAngleMod += (float) Lerp.interpolation(followingAngleMod,flying && moving ? angleToFollow : 0, Step);
 
         trunkPitch = angleStoppedMod + followingAngleMod;
+
     }
 
 

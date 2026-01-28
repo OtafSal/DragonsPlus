@@ -5,21 +5,15 @@ import com.mojang.logging.LogUtils;
 import com.sorensmods.dragonsplus.entity.DragonAnimController;
 import com.sorensmods.dragonsplus.entity.GenericDragon;
 import com.sorensmods.dragonsplus.entity.ai.DragonMoveController;
-import com.sorensmods.dragonsplus.entity.client.KeyMappings;
-import com.sorensmods.dragonsplus.entity.client.enderdragonRendering.ModEnderDragonModel;
-import net.minecraft.client.model.HierarchicalModel;
-import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
+import com.sorensmods.dragonsplus.entity.ai.DragonRandomFlyingGoal;
+import com.sorensmods.dragonsplus.entity.ai.DragonRandomLiftoff;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.*;
@@ -28,32 +22,33 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 
 import net.minecraft.world.entity.ai.goal.*;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NonTameRandomTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
 
 import net.minecraft.world.entity.animal.FlyingAnimal;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.vehicle.DismountHelper;
-import net.minecraft.world.food.Foods;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.SaddleItem;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BedBlock;
-import net.minecraft.world.level.gameevent.GameEvent;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.Tags;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingAnimal, PlayerRideable {
 
+    //Dragon-specific attributes
+    public static final double LIFTOFF_POWER = 3;
+    public static final double JUMP_POWER = 1;
+    public static final int STAMINA = 10;
+
     //Generic code for all dragons
-    public GenericDragon base;
+    public final GenericDragon base;
 
     //Saddle data
     private static final EntityDataAccessor<Boolean> DATA_SADDLED = SynchedEntityData.defineId(ModEnderDragon.class, EntityDataSerializers.BOOLEAN);
@@ -61,6 +56,8 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
 
     //Animation controller (animations + spine register)
     public DragonAnimController anims = new DragonAnimController(this, 20);
+
+
 
 
     /**
@@ -76,14 +73,16 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
     public ModEnderDragon(EntityType<? extends TamableAnimal> pEntityType, Level pLevel) {
 
         super(pEntityType, pLevel);
-        base = new GenericDragon(this);
-        moveControl = new DragonMoveController(base);
-        navigation = base.groundNavigation;
+        base = new GenericDragon(this, JUMP_POWER, LIFTOFF_POWER);
 
         noCulling = true;
 
+        moveControl = new DragonMoveController(base);
+
         anims.UpperSpine = new ArrayList<>();
         anims.LowerSpine = new ArrayList<>();
+
+        navigation = base.ground;
 
     }
 
@@ -92,28 +91,38 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
         return Animal.createLivingAttributes()
                 .add(Attributes.MAX_HEALTH, 60)
                 .add(Attributes.MOVEMENT_SPEED, 0.2f)
-                .add(Attributes.FOLLOW_RANGE, 16)
+                .add(Attributes.FOLLOW_RANGE, 40)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1)
                 .add(Attributes.FLYING_SPEED, 0.32f)
-                .add(Attributes.JUMP_STRENGTH, 3)
-                .add(Attributes.FALL_DAMAGE_MULTIPLIER, 0);
+                .add(Attributes.JUMP_STRENGTH, JUMP_POWER)
+                .add(Attributes.FALL_DAMAGE_MULTIPLIER, 0)
+                .add(Attributes.ATTACK_DAMAGE, 10);
     }
 
     //AI (Default)
     @Override
     protected void registerGoals() {
+
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new PanicGoal(this, 1.25));
-        this.goalSelector.addGoal(2, new BreedGoal(this, 1.0));
-        this.goalSelector.addGoal(3, new TemptGoal(this, 1.1, p_326983_ -> p_326983_.is(Tags.Items.FOODS_RAW_FISH), false));
-        this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.1));
-        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 1.0));
-        targetSelector.addGoal(3, new NonTameRandomTargetGoal<>(this, Animal.class, false, e -> (e instanceof Animal)));
 
+        //this.goalSelector.addGoal(2, new BreedGoal(this, 1.0));
+        this.goalSelector.addGoal(3, new TemptGoal(this, 1.1f, p_326983_ -> p_326983_.is(Tags.Items.FOODS_RAW_FISH), false));
+        this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.1));
+
+        this.goalSelector.addGoal(1, new DragonRandomFlyingGoal(this, 1f, 15, 30, 40));
+        this.goalSelector.addGoal(6, new RandomStrollGoal(this, 1f));
+        this.goalSelector.addGoal(7, new DragonRandomLiftoff(this, LIFTOFF_POWER, JUMP_POWER));
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
 
         this.goalSelector.addGoal(2, new SitWhenOrderedToGoal(this));
+        //this.goalSelector.addGoal(5, new DragonFollowOwnerGoal(base, 1f, 10f, 5f, 20f));
+
+        targetSelector.addGoal(0, new OwnerHurtByTargetGoal(this));
+        targetSelector.addGoal(1, new OwnerHurtTargetGoal(this));
+        targetSelector.addGoal(2, new HurtByTargetGoal(this));
+        targetSelector.addGoal(3, new NonTameRandomTargetGoal<>(this, Animal.class, false, e -> (e instanceof Animal)));
     }
 
 
@@ -123,9 +132,13 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
     public void tick()
     {
         super.tick();
+        //LogUtils.getLogger().debug(!base.isFlying() + "");
 
-        navigation = base.updateVars(navigation);
-
+        base.updateVars();
+        if (!level().isClientSide) {
+            if (base.changeNav) navigation = base.setNavigation(base.flying);
+        }
+        else {
             //Animations
             if (base.isFlying()) {
                 anims.AnimateLiftOff();
@@ -137,10 +150,9 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
             } else {
                 anims.AnimateIdle();
             }
-
             calculateEntityAnimation(true);
             anims.animateSitting(isInSittingPose());
-
+        }
     }
 
 

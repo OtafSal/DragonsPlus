@@ -1,13 +1,14 @@
 package com.sorensmods.dragonsplus.entity.client.enderdragonRendering;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.logging.LogUtils;
 import com.sorensmods.dragonsplus.DragonsPlus;
+import com.sorensmods.dragonsplus.entity.client.CustomRenderTypes;
 import com.sorensmods.dragonsplus.entity.custom.ModEnderDragon;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 
 public class ModEnderDragonRenderer extends MobRenderer<ModEnderDragon, ModEnderDragonModel<ModEnderDragon>> {
@@ -15,6 +16,7 @@ public class ModEnderDragonRenderer extends MobRenderer<ModEnderDragon, ModEnder
         super(pContext, new ModEnderDragonModel<>(pContext.bakeLayer(ModEnderDragonModel.LAYER_LOCATION)), 1.5f);
 
         addLayer(SADDLE_LAYER);
+        addLayer(GLOW_LAYER);
     }
 
     @Override
@@ -31,6 +33,8 @@ public class ModEnderDragonRenderer extends MobRenderer<ModEnderDragon, ModEnder
 
         super.render(pEntity, pEntityYaw, pPartialTicks, pPoseStack, pBuffer, pPackedLight);
     }
+
+    //Layers
     public final RenderLayer<ModEnderDragon, ModEnderDragonModel<ModEnderDragon>> SADDLE_LAYER = new RenderLayer<>(this)
     {
         @Override
@@ -40,6 +44,21 @@ public class ModEnderDragonRenderer extends MobRenderer<ModEnderDragon, ModEnder
                 renderColoredCutoutModel(model, ResourceLocation.fromNamespaceAndPath(DragonsPlus.MOD_ID, "textures/entity/modenderdragon/modenderdragonsaddle.png"), ps, buffer, light, dragon, -1);
         }
     };
+
+    public final RenderLayer<ModEnderDragon, ModEnderDragonModel<ModEnderDragon>> GLOW_LAYER = new RenderLayer<>(this)
+    {
+        @Override
+        public void render(PoseStack ps, MultiBufferSource buffer, int light, ModEnderDragon dragon, float pLimbSwing, float pLimbSwingAmount, float pPartialTicks, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch)
+        {
+            if (dragon.deathTime == 0)
+            {
+                var type = CustomRenderTypes.glow(ResourceLocation.fromNamespaceAndPath(DragonsPlus.MOD_ID ,"textures/entity/modenderdragon/modenderdragonglow.png"));
+                model.renderToBuffer(ps, buffer.getBuffer(type), 0xffffff, OverlayTexture.NO_OVERLAY, -1);
+            }
+        }
+    };
+
+
 
     @Override
     public ResourceLocation getTextureLocation(ModEnderDragon pEntity) {

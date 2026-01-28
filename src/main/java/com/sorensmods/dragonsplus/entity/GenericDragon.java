@@ -19,49 +19,54 @@ import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.DismountHelper;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.Tags;
-import org.jetbrains.annotations.Nullable;
 
 public class GenericDragon {
 
-    //Flight behavior
-    public final FlyingPathNavigation flyingNavigation;
-    public final GroundPathNavigation groundNavigation;
+
     public final TamableAnimal entity;
+
+    //Flight behavior
+    public final FlyingPathNavigation flight;
+    public final GroundPathNavigation ground;
 
     public boolean flying;
     public boolean nearGround;
+    public boolean changeNav = false;
 
     public boolean soaring;
     public boolean movingFly;
-    public boolean sit;
 
     float speedBonus = 0;
     final float ACCELERATION;
     final float MAX_SPEED;
     public float angleX;
 
+    public final double JUMP_POWER;
+    public final double LIFTOFF_POWER;
 
 
-    public GenericDragon(TamableAnimal entityGet)
+
+
+    public GenericDragon(TamableAnimal entityGet, double jumpPower, double liftoffPower)
     {
         entity = entityGet;
 
-        flyingNavigation = new FlyingPathNavigation(entity, entity.level());
-        groundNavigation = new GroundPathNavigation(entity, entity.level());
+        flight = new FlyingPathNavigation(entity, entity.level());
+        ground = new GroundPathNavigation(entity, entity.level());
 
-        flyingNavigation.setCanFloat(true);
-        groundNavigation.setCanFloat(true);
+        flight.setCanFloat(true);
+        ground.setCanFloat(true);
 
         ACCELERATION = (float) (entity.getAttribute(Attributes.FLYING_SPEED).getValue()/10);
         MAX_SPEED = (float) (entity.getAttribute(Attributes.FLYING_SPEED).getValue()*2 );
-
+        JUMP_POWER = jumpPower;
+        LIFTOFF_POWER = liftoffPower;
     }
 
 
@@ -82,21 +87,31 @@ public class GenericDragon {
         return flying;
     }
 
+    public static boolean isFlying(PathfinderMob entity, boolean alreadyFlying)
+    {
+        if (alreadyFlying) return !entity.onGround();
+        boolean nearGround = entity.onGround() || !entity.level().noCollision(entity, new AABB(entity.getX(), entity.getY(), entity.getZ(), entity.getX(), entity.getY() - (3), entity.getZ()));
+        return !entity.isInWater() && !nearGround;
+    }
+
     public boolean isNearGround()
     {
         return nearGround;
     }
 
-    PathNavigation setNavigation(boolean flyingGet)
+    public PathNavigation setNavigation(boolean flyingGet)
     {
+        changeNav = false;
 
         return flyingGet ?
-                flyingNavigation :
-                groundNavigation;
+                flight :
+                ground;
     }
 
-    public PathNavigation updateVars(PathNavigation navigation)
+
+    public void updateVars()
     {
+        PathNavigation navigationNew = entity.getNavigation();
 
         //Checks if its near ground
         nearGround = entity.onGround() || !entity.level().noCollision(entity, new AABB(entity.getX(), entity.getY(), entity.getZ(), entity.getX(), entity.getY() - (3), entity.getZ()));
@@ -106,8 +121,8 @@ public class GenericDragon {
         {
             setFlying(flyingNew);
 
-            // update pathfinding method
-            if (!entity.level().isClientSide) navigation = setNavigation(flying);
+            //Update pathfinding method
+            changeNav = true;
         }
 
 
@@ -122,6 +137,17 @@ public class GenericDragon {
 
             if (speedBonus < 0) speedBonus = 0;
             if (speedBonus > MAX_SPEED) speedBonus = MAX_SPEED;
+
+            if (entity.getControllingPassenger() == null) {
+
+                angleX = (float) -(Mth.atan2(entity.getDeltaMovement().y, Mth.sqrt(
+                        (float) entity.getDeltaMovement().x * (float) entity.getDeltaMovement().x +
+                                (float) entity.getDeltaMovement().z * (float) entity.getDeltaMovement().z)) *
+                        (double) (180F / (float) Math.PI));
+            }
+
+            entity.setXRot(angleX);
+
         }
         else {
             //reset acceleration
@@ -129,14 +155,14 @@ public class GenericDragon {
             movingFly = false;
             soaring = false;
         }
-
-        return navigation;
     }
 
 
-    public void liftOff()
+    public static void liftOff(double liftoff, double jump, LivingEntity entity)
     {
+        entity.getAttribute(Attributes.JUMP_STRENGTH).setBaseValue(liftoff);
         entity.jumpFromGround();
+        entity.getAttribute(Attributes.JUMP_STRENGTH).setBaseValue(jump);
     }
 
 
@@ -290,17 +316,17 @@ public class GenericDragon {
         float yaw = driver.yHeadRot;
         if (move.z > 0) // rotate in the direction of the drivers controls
             yaw += (float) Mth.atan2(driver.zza, driver.xxa) * (180f / (float) Math.PI) - 90;
+
         entity.yHeadRot = yaw;
         //This variable is also accessed in the dragon animator controller;
         angleX = driver.getXRot() * 0.68f;
-        entity.setXRot(angleX);
+
         // rotate body towards the head
         entity.setYRot(Mth.rotateIfNecessary(entity.yHeadRot, entity.getYRot(), 4));
 
-
         if (entity.isControlledByLocalInstance())
         {
-            if (!isFlying() && hasLocalDriver() && KeyMappings.FLIGHT_ASCEND_KEY.isDown()) liftOff();
+            if (!isFlying() && hasLocalDriver() && KeyMappings.FLIGHT_ASCEND_KEY.isDown()) liftOff(LIFTOFF_POWER, JUMP_POWER, entity);
         }
     }
 
