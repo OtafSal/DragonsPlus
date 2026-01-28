@@ -12,6 +12,7 @@ import org.jline.utils.Log;
 public class DragonMoveController extends MoveControl
 {
     private final GenericDragon dragon;
+    float yaw = 0;
 
     public DragonMoveController(GenericDragon dragon)
     {
@@ -53,7 +54,7 @@ public class DragonMoveController extends MoveControl
             if (Math.abs(yDif) > (double) 1.0E-5F || Math.abs(distSq) > (double) 1.0E-5F)
                 mob.setYya((float) yDif * speed);
 
-            float yaw = (float) (Mth.atan2(zDif, xDif) * (double) (180F / (float) Math.PI)) - 90.0F;
+            yaw += (float) Lerp.interpolation(yaw, (Mth.atan2(zDif, xDif) * (double) (180F / (float) Math.PI)) - 90.0F, 10);
 
             //mob.setYRot(rotlerp(mob.getYRot(), yaw, 6));
             //mob.setXRot(rotlerp(dragon.angleX, pitch, 6));

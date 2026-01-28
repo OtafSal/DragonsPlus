@@ -140,10 +140,10 @@ public class GenericDragon {
 
             if (entity.getControllingPassenger() == null) {
 
-                angleX = (float) -(Mth.atan2(entity.getDeltaMovement().y, Mth.sqrt(
+                angleX += (float) Lerp.interpolation(angleX, -(Mth.atan2(entity.getDeltaMovement().y, Mth.sqrt(
                         (float) entity.getDeltaMovement().x * (float) entity.getDeltaMovement().x +
                                 (float) entity.getDeltaMovement().z * (float) entity.getDeltaMovement().z)) *
-                        (double) (180F / (float) Math.PI));
+                        (double) (180F / (float) Math.PI)), 3);
             }
 
             entity.setXRot(angleX);
