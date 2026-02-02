@@ -4,9 +4,7 @@ package com.sorensmods.dragonsplus.entity.custom;
 import com.mojang.logging.LogUtils;
 import com.sorensmods.dragonsplus.entity.DragonAnimController;
 import com.sorensmods.dragonsplus.entity.GenericDragon;
-import com.sorensmods.dragonsplus.entity.ai.DragonMoveController;
-import com.sorensmods.dragonsplus.entity.ai.DragonRandomFlyingGoal;
-import com.sorensmods.dragonsplus.entity.ai.DragonRandomLiftoff;
+import com.sorensmods.dragonsplus.entity.ai.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -21,6 +19,7 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 
+import net.minecraft.world.entity.ai.control.BodyRotationControl;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NonTameRandomTargetGoal;
@@ -34,9 +33,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.SaddleItem;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.Tags;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector2f;
+import org.joml.Vector3f;
 
 import java.util.ArrayList;
 
@@ -58,8 +60,6 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
     public DragonAnimController anims = new DragonAnimController(this, 20);
 
 
-
-
     /**
      * Returns true if the entity is flying.
      */
@@ -77,13 +77,18 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
 
         noCulling = true;
 
-        moveControl = new DragonMoveController(base);
+        moveControl = new DragonMoveController(base, 1.5f);
 
         anims.UpperSpine = new ArrayList<>();
         anims.LowerSpine = new ArrayList<>();
 
         navigation = base.ground;
 
+    }
+
+    @Override
+    protected BodyRotationControl createBodyControl() {
+        return new DragonBodyController(this);
     }
 
     public static AttributeSupplier.Builder Properties()
@@ -106,18 +111,18 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new PanicGoal(this, 1.25));
 
-        //this.goalSelector.addGoal(2, new BreedGoal(this, 1.0));
         this.goalSelector.addGoal(3, new TemptGoal(this, 1.1f, p_326983_ -> p_326983_.is(Tags.Items.FOODS_RAW_FISH), false));
         this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.1));
 
-        this.goalSelector.addGoal(1, new DragonRandomFlyingGoal(this, 1f, 15, 30, 40));
+        this.goalSelector.addGoal(6, new DragonRandomFlyingGoal(this, 1f, 15, 30, 40));
         this.goalSelector.addGoal(6, new RandomStrollGoal(this, 1f));
         this.goalSelector.addGoal(7, new DragonRandomLiftoff(this, LIFTOFF_POWER, JUMP_POWER));
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
 
+        this.goalSelector.addGoal(5, new DragonRunAroundLikeCrazyGoal(this, navigation, 1f));
         this.goalSelector.addGoal(2, new SitWhenOrderedToGoal(this));
-        //this.goalSelector.addGoal(5, new DragonFollowOwnerGoal(base, 1f, 10f, 5f, 20f));
+        this.goalSelector.addGoal(5, new DragonFollowOwnerGoal(this, 1f, 10f, 5f, 40f, LIFTOFF_POWER, JUMP_POWER));
 
         targetSelector.addGoal(0, new OwnerHurtByTargetGoal(this));
         targetSelector.addGoal(1, new OwnerHurtTargetGoal(this));
@@ -132,9 +137,9 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
     public void tick()
     {
         super.tick();
-        //LogUtils.getLogger().debug(!base.isFlying() + "");
 
         base.updateVars();
+
         if (!level().isClientSide) {
             if (base.changeNav) navigation = base.setNavigation(base.flying);
         }
@@ -219,7 +224,7 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
         if (stackResult.consumesAction()) return stackResult;
 
         // tame!
-        if (!isTame()) {
+        if (!isTame() && stack.is(ItemTags.FISHES)) {
             return base.tame(stack, player, navigation);
         }
 
@@ -248,9 +253,9 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
         }
 
         // ride on!
-        if (base.isTamedFor(player) && isSaddled() && !isFood(stack) && !isInSittingPose())
+        if (!isFood(stack) && !isInSittingPose())
         {
-            return base.rideOn(player, navigation);
+            return base.rideOn(player, isSaddled(), navigation);
         }
 
         return super.mobInteract(player, hand);
@@ -267,7 +272,7 @@ public class ModEnderDragon extends TamableAnimal implements Saddleable, FlyingA
     @Override
     public LivingEntity getControllingPassenger()
     {
-        return base.getControllingPassenger();
+        return base.getControllingPassenger(isSaddled());
     }
 
     @Override

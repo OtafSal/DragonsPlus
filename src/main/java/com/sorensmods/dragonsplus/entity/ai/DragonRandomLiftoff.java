@@ -2,19 +2,20 @@ package com.sorensmods.dragonsplus.entity.ai;
 
 import com.sorensmods.dragonsplus.entity.GenericDragon;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.goal.Goal;
 
 import java.util.EnumSet;
 
 public class DragonRandomLiftoff extends Goal {
 
-    private final PathfinderMob mob;
+    private final TamableAnimal mob;
     private final double JUMP_POWER;
     private final double LIFTOFF_POWER;
 
     boolean isFlying = false;
 
-    public DragonRandomLiftoff(PathfinderMob mob, double liftoff, double jump) {
+    public DragonRandomLiftoff(TamableAnimal mob, double liftoff, double jump) {
         this.mob = mob;
 
         JUMP_POWER = jump;
@@ -25,6 +26,8 @@ public class DragonRandomLiftoff extends Goal {
 
     @Override
     public boolean canUse() {
+
+        if (mob.getOwner() != null) return false;
 
         isFlying = GenericDragon.isFlying(mob, isFlying);
 

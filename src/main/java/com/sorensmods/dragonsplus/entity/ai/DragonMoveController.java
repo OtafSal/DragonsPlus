@@ -12,12 +12,13 @@ import org.jline.utils.Log;
 public class DragonMoveController extends MoveControl
 {
     private final GenericDragon dragon;
-    float yaw = 0;
+    private final float neckOffset;
 
-    public DragonMoveController(GenericDragon dragon)
+    public DragonMoveController(GenericDragon dragon, float neckOffset)
     {
         super(dragon.entity);
         this.dragon = dragon;
+        this.neckOffset = neckOffset;
     }
 
 
@@ -48,20 +49,20 @@ public class DragonMoveController extends MoveControl
             }
 
 
+
             float speed = (float) (speedModifier * mob.getAttributeValue(Attributes.FLYING_SPEED));
             double distSq = Math.sqrt(xDif * xDif + zDif * zDif);
             mob.setSpeed(speed);
             if (Math.abs(yDif) > (double) 1.0E-5F || Math.abs(distSq) > (double) 1.0E-5F)
                 mob.setYya((float) yDif * speed);
 
-            yaw += (float) Lerp.interpolation(yaw, (Mth.atan2(zDif, xDif) * (double) (180F / (float) Math.PI)) - 90.0F, 10);
+            float yaw = (float) (Mth.atan2(zDif, xDif) * (double) (180F / (float) Math.PI)) - 90.0F;
+            mob.setYRot(rotlerp(mob.getYRot(), yaw, 4));
 
-            //mob.setYRot(rotlerp(mob.getYRot(), yaw, 6));
-            //mob.setXRot(rotlerp(dragon.angleX, pitch, 6));
-
-            mob.yHeadRot = yaw;
-            // rotate body towards the head
-            mob.setYRot(Mth.rotateIfNecessary(mob.yHeadRot, mob.getYRot(), 4));
+            if (sq > 5) {
+                //Rotate the head
+                mob.getLookControl().setLookAt(wantedX, wantedY + neckOffset, wantedZ);
+            }
         }
         else
         {

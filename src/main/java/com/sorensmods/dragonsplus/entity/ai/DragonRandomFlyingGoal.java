@@ -8,6 +8,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.behavior.TryFindLand;
 import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -17,7 +18,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.EnumSet;
 
 public class DragonRandomFlyingGoal extends Goal {
-    private final PathfinderMob dragon;
+    private final TamableAnimal dragon;
     private final float speedMod;
 
     private int timeout;
@@ -36,7 +37,7 @@ public class DragonRandomFlyingGoal extends Goal {
     private boolean flying = false;
     private boolean registerPos = false;
 
-    public DragonRandomFlyingGoal(PathfinderMob dragon, float speedMod, int minHeight, int maxHeight, int range) {
+    public DragonRandomFlyingGoal(TamableAnimal dragon, float speedMod, int minHeight, int maxHeight, int range) {
         this.dragon = dragon;
         this.speedMod = speedMod;
 
@@ -58,6 +59,8 @@ public class DragonRandomFlyingGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (dragon.getOwner() != null) return false;
+
         MoveControl movecontrol = dragon.getMoveControl();
         flying = GenericDragon.isFlying(dragon, flying);
         if (!GenericDragon.isFlying(dragon, flying)) {
@@ -78,7 +81,7 @@ public class DragonRandomFlyingGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return timeout != 0;
+        return timeout > 0;
     }
 
     @Override
@@ -102,8 +105,8 @@ public class DragonRandomFlyingGoal extends Goal {
         double z = dragon.getZ() + (double) ((randomsource.nextFloat() * 2.0F - 1.0F) * 320);
 
         double bestY = (relativeMin + relatibeMax)/2;
-        double bestX = (relative.x + range)/2;
-        double bestZ = (relative.z + range)/2;
+        double bestX = relative.x;
+        double bestZ = relative.z;
 
         //Go to best position if out of bounds
         if (y < relativeMin || y > relatibeMax) y = bestY;
@@ -115,7 +118,7 @@ public class DragonRandomFlyingGoal extends Goal {
         return pos;
     }
 
-    Vec3 setInitialPos()
+    void setInitialPos()
     {
         relative = dragon.position();
 
@@ -123,8 +126,6 @@ public class DragonRandomFlyingGoal extends Goal {
         relatibeMax = dragon.position().y + maxHeight;
 
         registerPos = false;
-
-        return dragon.position();
     }
 
     void resetLanding()

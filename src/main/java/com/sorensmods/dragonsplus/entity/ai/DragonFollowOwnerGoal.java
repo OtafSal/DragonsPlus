@@ -122,7 +122,8 @@ public class DragonFollowOwnerGoal extends Goal
                 else if (
                         dragon.onGround()
                                 /*&& dragon.entity.canFly()*/
-                                && (this.owner.blockPosition().getY() - dragon.blockPosition().getY()) >= startDistance)
+                                && ((this.owner.blockPosition().getY() - dragon.blockPosition().getY()) >= startDistance
+                                ||   this.dragon.distanceToSqr(this.owner) >= (startDistance + teleportDistance)/2))
                 {
                     GenericDragon.liftOff(liftoffPower, jumpPower, dragon);
                 }

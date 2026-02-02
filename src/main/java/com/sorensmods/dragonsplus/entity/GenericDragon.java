@@ -2,6 +2,7 @@ package com.sorensmods.dragonsplus.entity;
 
 import com.mojang.logging.LogUtils;
 import com.sorensmods.dragonsplus.entity.client.KeyMappings;
+import com.sorensmods.dragonsplus.entity.custom.ModEnderDragon;
 import com.sorensmods.dragonsplus.util.Lerp;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -49,8 +50,6 @@ public class GenericDragon {
 
     public final double JUMP_POWER;
     public final double LIFTOFF_POWER;
-
-
 
 
     public GenericDragon(TamableAnimal entityGet, double jumpPower, double liftoffPower)
@@ -125,6 +124,8 @@ public class GenericDragon {
             changeNav = true;
         }
 
+        // rotate body towards the head
+        angleX += (float) Lerp.interpolation(angleX, entity.getXRot(), 4);
 
         if (isFlying())
         {
@@ -137,16 +138,6 @@ public class GenericDragon {
 
             if (speedBonus < 0) speedBonus = 0;
             if (speedBonus > MAX_SPEED) speedBonus = MAX_SPEED;
-
-            if (entity.getControllingPassenger() == null) {
-
-                angleX += (float) Lerp.interpolation(angleX, -(Mth.atan2(entity.getDeltaMovement().y, Mth.sqrt(
-                        (float) entity.getDeltaMovement().x * (float) entity.getDeltaMovement().x +
-                                (float) entity.getDeltaMovement().z * (float) entity.getDeltaMovement().z)) *
-                        (double) (180F / (float) Math.PI)), 3);
-            }
-
-            entity.setXRot(angleX);
 
         }
         else {
@@ -200,6 +191,11 @@ public class GenericDragon {
     }
     public void tamedFor(Player player, boolean successful, PathNavigation navigation)
     {
+        GenericDragon.tamedFor(entity, player, successful, navigation);
+    }
+
+    public static void tamedFor(TamableAnimal entity ,Player player, boolean successful, PathNavigation navigation)
+    {
         if (successful)
         {
             entity.tame(player);
@@ -212,7 +208,6 @@ public class GenericDragon {
         {
             entity.level().broadcastEntityEvent(entity, (byte) 6);
         }
-
     }
 
      public InteractionResult healDragon(ItemStack stack)
@@ -257,18 +252,38 @@ public class GenericDragon {
     }
 
     //Ride on
-    public InteractionResult rideOn(Player player, PathNavigation navigation)
+    public InteractionResult rideOn(Player player, boolean isSaddled, PathNavigation navigation)
     {
         if (!entity.level().isClientSide)
         {
             player.startRiding(entity);
-            navigation.stop();
-            entity.setTarget(null);
+
+            if (isSaddled) {
+                navigation.stop();
+                entity.setTarget(null);
+            }
         }
-        entity.setOrderedToSit(false);
-        entity.setInSittingPose(false);
+        if (entity.isTame()) {
+            entity.setOrderedToSit(false);
+            entity.setInSittingPose(false);
+        }
         return InteractionResult.sidedSuccess(entity.level().isClientSide);
     }
+
+    public void riddenTame(Player player, PathNavigation navigation)
+    {
+        float random = entity.getRandom().nextFloat();
+
+        if (!entity.level().isClientSide && !isTamedFor(player)) {
+            if (random <= 0.01) {
+                tamedFor(player, true, navigation);
+            }
+            else if (random <= 0.2) {
+                entity.ejectPassengers();
+            }
+        }
+    }
+
 
     public Vec3 getRiddenInput(Player driver, Vec3 move)
     {
@@ -317,11 +332,9 @@ public class GenericDragon {
         if (move.z > 0) // rotate in the direction of the drivers controls
             yaw += (float) Mth.atan2(driver.zza, driver.xxa) * (180f / (float) Math.PI) - 90;
 
+        //Look at the players aim
         entity.yHeadRot = yaw;
-        //This variable is also accessed in the dragon animator controller;
-        angleX = driver.getXRot() * 0.68f;
-
-        // rotate body towards the head
+        entity.setXRot(driver.getXRot() * 0.68f);
         entity.setYRot(Mth.rotateIfNecessary(entity.yHeadRot, entity.getYRot(), 4));
 
         if (entity.isControlledByLocalInstance())
@@ -346,9 +359,9 @@ public class GenericDragon {
      * For vehicles, the first passenger is generally considered the controller and "drives" the vehicle. For example,
      * Pigs, Horses, and Boats are generally "steered" by the controlling passenger.
      */
-    public LivingEntity getControllingPassenger()
+    public LivingEntity getControllingPassenger(boolean isSaddled)
     {
-        return entity.getFirstPassenger() instanceof LivingEntity driver && entity.isOwnedBy(driver)? driver : null;
+        return entity.getFirstPassenger() instanceof LivingEntity driver && entity.isOwnedBy(driver) && isSaddled? driver : null;
     }
 
     public void addPassenger(Entity passenger)
